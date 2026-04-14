@@ -8,7 +8,7 @@ Built on Kali Linux using Wazuh SIEM, n8n SOAR automation, multi-source threat i
 
 ## Workflow Overview
 
-![n8n Workflow](screenshots/workflow.png)
+![n8n Workflow](workflow.png)
 
 ---
 
@@ -268,14 +268,22 @@ Any plain English question works — the AI converts it to SQL automatically.
 
 ## Screenshots
 
-| | |
-|---|---|
-| Workflow Overview | `screenshots/workflow.png` |
-| Telegram CRITICAL Alert | `screenshots/telegram-critical.png` |
-| Telegram HIGH Alert | `screenshots/telegram-high.png` |
-| Telegram Bot Response | `screenshots/telegram-bot-reply.png` |
-| Wazuh Dashboard | `screenshots/wazuh-dashboard.png` |
-| PostgreSQL Alerts Table | `screenshots/postgres-alerts.png` |
+### Workflow Overview
+![Workflow](workflow.png)
+
+### Wazuh Dashboard
+![Wazuh Dashboard](wazuh-dashboard.png)
+
+### Telegram CRITICAL Alert
+![Telegram Critical](telegram-critical.png)
+
+### Telegram Bot — AI Responses
+![Bot Reply](telegram-bot-reply.png)
+![Bot Output 1](Telegrambot_Output1.png)
+![Bot Output 2](Telegrambot_Output3.png)
+
+### PostgreSQL Alerts Table
+![PostgreSQL](postgres-alerts.png)
 
 ---
 
