@@ -1,0 +1,2096 @@
+{
+  "name": "Final no api",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "5d011c3a-f81f-4f44-a8b5-c3f09a3128c6",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1216,
+        368
+      ],
+      "id": "cf7ba07f-30f9-4d20-9e84-af4dd80bb3e3",
+      "name": "Wazuh Webhook",
+      "webhookId": "5d011c3a-f81f-4f44-a8b5-c3f09a3128c6"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'received', timestamp: $now }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1664,
+        224
+      ],
+      "id": "784fc078-33c3-4572-9d8b-bbccf9e39242",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef-001",
+              "name": "rule_id",
+              "value": "={{$json.body.rule?.id ?? $json.rule?.id ?? 'unknown'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-002",
+              "name": "alert",
+              "value": "={{$json.body.rule?.description ?? $json.rule?.description ?? 'Unknown Alert'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-003",
+              "name": "source_ip",
+              "value": "={{$json.body.data?.srcip ?? $json.data?.srcip ?? $json.body.agent?.ip ?? '127.0.0.1'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-004",
+              "name": "severity",
+              "value": "={{parseInt($json.body.rule?.level ?? $json.rule?.level ?? 0)}}",
+              "type": "number"
+            },
+            {
+              "id": "ef-005",
+              "name": "agent_name",
+              "value": "={{$json.body.agent?.name ?? $json.agent?.name ?? 'unknown'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-006",
+              "name": "timestamp",
+              "value": "={{$json.body.timestamp ?? $now}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-007",
+              "name": "mitre_id",
+              "value": "={{$json.body.rule?.mitre?.id?.[0] ?? $json.rule?.mitre?.id?.[0] ?? 'N/A'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-008",
+              "name": "mitre_technique",
+              "value": "={{$json.body.rule?.mitre?.technique?.[0] ?? $json.rule?.mitre?.technique?.[0] ?? 'Unknown Technique'}}",
+              "type": "string"
+            },
+            {
+              "id": "ef-009",
+              "name": "mitre_tactic",
+              "value": "={{$json.body.rule?.mitre?.tactic?.[0] ?? $json.rule?.mitre?.tactic?.[0] ?? 'Unknown Tactic'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1648,
+        560
+      ],
+      "id": "35749b9b-7ecf-4a51-b018-81da6b67678a",
+      "name": "Extract Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "sg-001",
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2064,
+        352
+      ],
+      "id": "a4ab13b8-6608-45ab-b73c-d85a97a4a9b6",
+      "name": "IF Severity >= 5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "ip-001",
+              "leftValue": "={{ $json.source_ip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ip-002",
+              "leftValue": "={{ $json.source_ip }}",
+              "rightValue": "^(10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|127\\.|0\\.0\\.0\\.0|unknown)",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2384,
+        48
+      ],
+      "id": "99987611-24be-401e-b8c0-3e8ccb795345",
+      "name": "IF External IP"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.virustotal.com/api/v3/ip_addresses/{{$json.source_ip}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-apikey",
+              "value": "YOUR_API_KEY_HERE"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2768,
+        320
+      ],
+      "id": "3a6e4d73-03ba-4cef-b1dc-bd12d6d8de42",
+      "name": "VirusTotal"
+    },
+    {
+      "parameters": {
+        "url": "https://api.abuseipdb.com/api/v2/check",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ipAddress",
+              "value": "={{$('IF Severity >= 5').item.json.source_ip}}"
+            },
+            {
+              "name": "maxAgeInDays",
+              "value": "90"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Key",
+              "value": "YOUR_API_KEY_HERE"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -16
+      ],
+      "id": "9a15c060-1af8-438f-b772-a4a090cc0ed4",
+      "name": "AbuseIPDB"
+    },
+    {
+      "parameters": {
+        "url": "=https://otx.alienvault.com/api/v1/indicators/IPv4/{{$('IF Severity >= 5').item.json.source_ip}}/general",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-OTX-API-KEY",
+              "value": "YOUR_API_KEY_HERE"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3120,
+        320
+      ],
+      "id": "b91e34f5-0aaa-4c32-aa00-37473bd35c0d",
+      "name": "OTX AlienVault"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const vt_malicious = $node[\"VirusTotal\"].json.data?.attributes?.last_analysis_stats?.malicious ?? 0;\nconst vt_suspicious = $node[\"VirusTotal\"].json.data?.attributes?.last_analysis_stats?.suspicious ?? 0;\nconst abuse_score = $node[\"AbuseIPDB\"].json.data?.abuseConfidenceScore ?? 0;\nconst otx_pulses = $node[\"OTX AlienVault\"].json.pulse_info?.count ?? 0;\nconst severity = parseInt($('IF Severity >= 5').item.json.severity) || 0;\nconst intermediate_score = Math.min(100, (vt_malicious * 4) + (vt_suspicious * 1) + (abuse_score * 0.4) + (otx_pulses * 2) + (severity * 4));\nreturn { ...item.json, intermediate_score };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3312,
+        112
+      ],
+      "id": "a80234ce-d56c-4631-b9eb-852788a7aa68",
+      "name": "Intermediate Score"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "sh-001",
+              "leftValue": "={{ $json.intermediate_score }}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3488,
+        112
+      ],
+      "id": "45140a65-517e-4e09-850b-5fc74efb7433",
+      "name": "IF Shodan Gate"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.shodan.io/shodan/host/{{$('IF Severity >= 5').item.json.source_ip}}?key=YOUR_API_KEY_HERE",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3728,
+        -80
+      ],
+      "id": "f939d275-2ee0-4241-8d1e-9f68e4875e74",
+      "name": "Shodan"
+    },
+    {
+      "parameters": {
+        "url": "=http://ip-api.com/json/{{$('IF Severity >= 5').item.json.source_ip}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3984,
+        128
+      ],
+      "id": "890ae760-8734-45e1-8d84-68b90752f5c8",
+      "name": "IP Geolocation"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ba-001",
+              "name": "alert_name",
+              "value": "={{$('IF Severity >= 5').item.json.alert}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-002",
+              "name": "source_ip",
+              "value": "={{$('IF Severity >= 5').item.json.source_ip}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-003",
+              "name": "rule_id",
+              "value": "={{$('IF Severity >= 5').item.json.rule_id}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-004",
+              "name": "agent_name",
+              "value": "={{$('IF Severity >= 5').item.json.agent_name}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-005",
+              "name": "wazuh_timestamp",
+              "value": "={{$('IF Severity >= 5').item.json.timestamp}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-006",
+              "name": "mitre_id",
+              "value": "={{$('IF Severity >= 5').item.json.mitre_id}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-007",
+              "name": "mitre_technique",
+              "value": "={{$('IF Severity >= 5').item.json.mitre_technique}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-008",
+              "name": "mitre_tactic",
+              "value": "={{$('IF Severity >= 5').item.json.mitre_tactic}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-009",
+              "name": "vt_score",
+              "value": "={{$node['VirusTotal'].json.data?.attributes?.last_analysis_stats?.malicious ?? 0}}",
+              "type": "number"
+            },
+            {
+              "id": "ba-010",
+              "name": "vt_suspicious",
+              "value": "={{$node['VirusTotal'].json.data?.attributes?.last_analysis_stats?.suspicious ?? 0}}",
+              "type": "number"
+            },
+            {
+              "id": "ba-011",
+              "name": "abuse_score",
+              "value": "={{$node['AbuseIPDB'].json.data?.abuseConfidenceScore ?? 0}}",
+              "type": "number"
+            },
+            {
+              "id": "ba-012",
+              "name": "abuse_total_reports",
+              "value": "={{$node['AbuseIPDB'].json.data?.totalReports ?? 0}}",
+              "type": "number"
+            },
+            {
+              "id": "ba-013",
+              "name": "otx_pulses",
+              "value": "={{$node['OTX AlienVault'].json.pulse_info?.count ?? 0}}",
+              "type": "number"
+            },
+            {
+              "id": "ba-014",
+              "name": "shodan_ports",
+              "value": "={{$node['Shodan'].isExecuted && $node['Shodan'].json.ports ? $node['Shodan'].json.ports.join(', ') : 'N/A'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-015",
+              "name": "shodan_vulns",
+              "value": "={{$node['Shodan'].isExecuted && $node['Shodan'].json.vulns ? Object.keys($node['Shodan'].json.vulns).join(', ') : 'N/A'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-016",
+              "name": "shodan_org",
+              "value": "={{$node['Shodan'].isExecuted ? ($node['Shodan'].json.org ?? 'Unknown') : 'N/A'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-017",
+              "name": "country",
+              "value": "={{$node['IP Geolocation'].json.country ?? 'Unknown'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-018",
+              "name": "geo_city",
+              "value": "={{$node['IP Geolocation'].json.city ?? 'Unknown'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-019",
+              "name": "geo_isp",
+              "value": "={{$node['IP Geolocation'].json.isp ?? 'Unknown'}}",
+              "type": "string"
+            },
+            {
+              "id": "ba-020",
+              "name": "risk_score",
+              "value": "={{ Math.min(100, (($node['VirusTotal'].json.data?.attributes?.last_analysis_stats?.malicious ?? 0) * 4) + (($node['VirusTotal'].json.data?.attributes?.last_analysis_stats?.suspicious ?? 0) * 1) + (($node['AbuseIPDB'].json.data?.abuseConfidenceScore ?? 0) * 0.4) + (($node['OTX AlienVault'].json.pulse_info?.count ?? 0) * 2) + ($node['Shodan'].isExecuted && $node['Shodan'].json.vulns ? Object.keys($node['Shodan'].json.vulns).length * 5 : 0) + ((parseInt($('IF Severity >= 5').item.json.severity) || 0) * 4)) }}",
+              "type": "number"
+            },
+            {
+              "id": "ba-021",
+              "name": "risk_level",
+              "value": "={{ $json.risk_score >= 75 ? 'CRITICAL' : $json.risk_score >= 50 ? 'HIGH' : $json.risk_score >= 25 ? 'MEDIUM' : 'LOW' }}",
+              "type": "string"
+            },
+            {
+              "id": "ba-022",
+              "name": "action",
+              "value": "={{ $json.risk_score >= 75 ? 'IMMEDIATE_RESPONSE' : $json.risk_score >= 50 ? 'INVESTIGATE' : $json.risk_score >= 25 ? 'MONITOR' : 'LOG_ONLY' }}",
+              "type": "string"
+            },
+            {
+              "id": "ba-023",
+              "name": "alert_path",
+              "value": "network",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4240,
+        320
+      ],
+      "id": "cf30da8d-7f5d-4a19-9117-0fe40d98204b",
+      "name": "Build Alert Data"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ep-001",
+              "name": "alert_name",
+              "value": "={{$json.alert}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-002",
+              "name": "source_ip",
+              "value": "={{$json.source_ip}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-003",
+              "name": "rule_id",
+              "value": "={{$json.rule_id}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-004",
+              "name": "agent_name",
+              "value": "={{$json.agent_name}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-005",
+              "name": "wazuh_timestamp",
+              "value": "={{$json.timestamp}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-006",
+              "name": "mitre_id",
+              "value": "={{$json.mitre_id}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-007",
+              "name": "mitre_technique",
+              "value": "={{$json.mitre_technique}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-008",
+              "name": "mitre_tactic",
+              "value": "={{$json.mitre_tactic}}",
+              "type": "string"
+            },
+            {
+              "id": "ep-009",
+              "name": "vt_score",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "ep-010",
+              "name": "vt_suspicious",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "ep-011",
+              "name": "abuse_score",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "ep-012",
+              "name": "abuse_total_reports",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "ep-013",
+              "name": "otx_pulses",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "ep-014",
+              "name": "shodan_ports",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "ep-015",
+              "name": "shodan_vulns",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "ep-016",
+              "name": "shodan_org",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "ep-017",
+              "name": "country",
+              "value": "Internal",
+              "type": "string"
+            },
+            {
+              "id": "ep-018",
+              "name": "geo_city",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "ep-019",
+              "name": "geo_isp",
+              "value": "N/A",
+              "type": "string"
+            },
+            {
+              "id": "ep-020",
+              "name": "risk_score",
+              "value": "={{ Math.min(100, parseInt($json.severity) * 6) }}",
+              "type": "number"
+            },
+            {
+              "id": "ep-021",
+              "name": "risk_level",
+              "value": "={{ $json.risk_score >= 75 ? 'CRITICAL' : $json.risk_score >= 50 ? 'HIGH' : $json.risk_score >= 25 ? 'MEDIUM' : 'LOW' }}",
+              "type": "string"
+            },
+            {
+              "id": "ep-022",
+              "name": "action",
+              "value": "={{ $json.risk_score >= 75 ? 'IMMEDIATE_RESPONSE' : $json.risk_score >= 50 ? 'INVESTIGATE' : $json.risk_score >= 25 ? 'MONITOR' : 'LOG_ONLY' }}",
+              "type": "string"
+            },
+            {
+              "id": "ep-023",
+              "name": "alert_path",
+              "value": "endpoint",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2720,
+        608
+      ],
+      "id": "76b047e8-0828-4ed9-a57b-d29b696dd52f",
+      "name": "Endpoint Alert"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const score = item.json.risk_score ?? 0;\nconst risk_level = score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : score >= 25 ? 'MEDIUM' : 'LOW';\nconst action = score >= 75 ? 'IMMEDIATE_RESPONSE' : score >= 50 ? 'INVESTIGATE' : score >= 25 ? 'MONITOR' : 'LOG_ONLY';\nreturn { ...item.json, risk_level, action };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        688
+      ],
+      "id": "b000fc10-8292-456d-aeec-c109519c492f",
+      "name": "Fix Risk Level"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-001",
+                    "leftValue": "={{ $json.risk_level }}",
+                    "rightValue": "CRITICAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CRITICAL"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-002",
+                    "leftValue": "={{ $json.risk_level }}",
+                    "rightValue": "HIGH",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HIGH"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-003",
+                    "leftValue": "={{ $json.risk_level }}",
+                    "rightValue": "MEDIUM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "MEDIUM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-004",
+                    "leftValue": "={{ $json.risk_level }}",
+                    "rightValue": "LOW",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "LOW"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4528,
+        576
+      ],
+      "id": "fe04aa90-66c9-42b0-9e0f-44573bcbc06e",
+      "name": "Switch Risk Level"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ip": "={{ $json.source_ip }}",
+            "alert_name": "={{ $json.alert_name }}",
+            "risk_level": "={{ $json.risk_level }}",
+            "risk_score": "={{ $json.risk_score }}",
+            "mitre_attack": "={{ $json.mitre_id }} - {{ $json.mitre_technique }}",
+            "country": "={{ $json.country }}",
+            "ai_explanation": "CRITICAL - immediate response required",
+            "agent_name": "={{ $json.agent_name }}",
+            "rule_id": "={{ $json.rule_id }}",
+            "shodan_ports": "={{ $json.shodan_ports }}",
+            "shodan_vulns": "={{ $json.shodan_vulns }}",
+            "vt_score": "={{ $json.vt_score }}",
+            "abuse_score": "={{ $json.abuse_score }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4944,
+        240
+      ],
+      "id": "21f5dfa8-4bb9-45c2-952e-20500dc63c92",
+      "name": "Save CRITICAL",
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ip": "={{ $json.source_ip }}",
+            "alert_name": "={{ $json.alert_name }}",
+            "risk_level": "={{ $json.risk_level }}",
+            "risk_score": "={{ $json.risk_score }}",
+            "mitre_attack": "={{ $json.mitre_id }} - {{ $json.mitre_technique }}",
+            "country": "={{ $json.country }}",
+            "ai_explanation": "HIGH - investigation required",
+            "agent_name": "={{ $json.agent_name }}",
+            "rule_id": "={{ $json.rule_id }}",
+            "shodan_ports": "={{ $json.shodan_ports }}",
+            "shodan_vulns": "={{ $json.shodan_vulns }}",
+            "vt_score": "={{ $json.vt_score }}",
+            "abuse_score": "={{ $json.abuse_score }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4944,
+        464
+      ],
+      "id": "5e36c580-dc1d-4dad-867e-692c2fb7f3f0",
+      "name": "Save HIGH",
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ip": "={{ $json.source_ip }}",
+            "alert_name": "={{ $json.alert_name }}",
+            "risk_level": "={{ $json.risk_level }}",
+            "risk_score": "={{ $json.risk_score }}",
+            "mitre_attack": "={{ $json.mitre_id }} - {{ $json.mitre_technique }}",
+            "country": "={{ $json.country }}",
+            "ai_explanation": "MEDIUM - monitoring",
+            "agent_name": "={{ $json.agent_name }}",
+            "rule_id": "={{ $json.rule_id }}",
+            "shodan_ports": "={{ $json.shodan_ports }}",
+            "shodan_vulns": "={{ $json.shodan_vulns }}",
+            "vt_score": "={{ $json.vt_score }}",
+            "abuse_score": "={{ $json.abuse_score }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4944,
+        672
+      ],
+      "id": "94a062d0-7264-4e30-ab30-c0dc4b7a52c3",
+      "name": "Save MEDIUM",
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ip": "={{ $json.source_ip }}",
+            "alert_name": "={{ $json.alert_name }}",
+            "risk_level": "LOW",
+            "risk_score": "=0",
+            "mitre_attack": "={{ $json.mitre_id }} - {{ $json.mitre_technique }}",
+            "country": "N/A",
+            "ai_explanation": "LOW - logged only",
+            "agent_name": "={{ $json.agent_name }}",
+            "rule_id": "={{ $json.rule_id }}",
+            "shodan_ports": "N/A",
+            "shodan_vulns": "N/A",
+            "vt_score": "=0",
+            "abuse_score": "=0"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        4944,
+        896
+      ],
+      "id": "df93d08e-aa60-4ed1-91e5-806e2f99b8fe",
+      "name": "Save LOW",
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ip": "={{ $json.source_ip }}",
+            "alert_name": "={{ $json.alert }}",
+            "risk_level": "LOW",
+            "risk_score": "=0",
+            "mitre_attack": "={{ $json.mitre_id }} - {{ $json.mitre_technique }}",
+            "country": "N/A",
+            "ai_explanation": "Low severity - no investigation required",
+            "agent_name": "={{ $json.agent_name }}",
+            "rule_id": "={{ $json.rule_id }}",
+            "shodan_ports": "N/A",
+            "shodan_vulns": "N/A",
+            "vt_score": "=0",
+            "abuse_score": "=0",
+            "id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ip",
+              "displayName": "ip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "alert_name",
+              "displayName": "alert_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_level",
+              "displayName": "risk_level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "risk_score",
+              "displayName": "risk_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mitre_attack",
+              "displayName": "mitre_attack",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ai_explanation",
+              "displayName": "ai_explanation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "agent_name",
+              "displayName": "agent_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rule_id",
+              "displayName": "rule_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "shodan_vulns",
+              "displayName": "shodan_vulns",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vt_score",
+              "displayName": "vt_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "abuse_score",
+              "displayName": "abuse_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "shodan_ports",
+              "displayName": "shodan_ports",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2384,
+        624
+      ],
+      "id": "ceed905a-a235-4b87-960d-a16742dc7505",
+      "name": "Fast Path DB Save",
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_Chat_ID",
+        "text": "=🚨 *CRITICAL ALERT*\n{{$('Fix Risk Level').item.json.country === 'Internal' ? 'The call is coming from inside the house.' : 'Your firewall called. It\\'s crying.'}}\n\n🖥 *Agent:* {{$('Fix Risk Level').item.json.agent_name}}\n📋 *Rule:* {{$('Fix Risk Level').item.json.rule_id}} — {{$('Fix Risk Level').item.json.alert_name}}\n\n{{$('Fix Risk Level').item.json.country === 'Internal' ? '🏠 *Origin:* Executed directly on host — no external IP' : '🌐 *Source IP:* ' + $('Fix Risk Level').item.json.source_ip + '\\n📍 *Location:* ' + ($('Fix Risk Level').item.json.country ?? 'Unknown') + ', ' + ($('Fix Risk Level').item.json.geo_city ?? 'N/A') + '\\n🏢 *ISP:* ' + ($('Fix Risk Level').item.json.geo_isp ?? 'N/A')}}\n\n🎯 *MITRE ATT&CK*\nTactic: {{$('Fix Risk Level').item.json.mitre_tactic}}\nTechnique: {{$('Fix Risk Level').item.json.mitre_technique}} ({{$('Fix Risk Level').item.json.mitre_id}})\n\n{{$('Fix Risk Level').item.json.country === 'Internal' ? '⚠️ *Endpoint Alert — Host Investigation Required*\\nThreat intel not applicable — threat executed locally on ' + $('Fix Risk Level').item.json.agent_name : '🔬 *Threat Intelligence*\\n• VirusTotal: ' + ($('Fix Risk Level').item.json.vt_score ?? 0) + ' malicious / ' + ($('Fix Risk Level').item.json.vt_suspicious ?? 0) + ' suspicious\\n• AbuseIPDB: ' + ($('Fix Risk Level').item.json.abuse_score ?? 0) + '% confidence (' + ($('Fix Risk Level').item.json.abuse_total_reports ?? 0) + ' reports)\\n• AlienVault OTX: ' + ($('Fix Risk Level').item.json.otx_pulses ?? 0) + ' threat pulses\\n• Shodan Ports: ' + ($('Fix Risk Level').item.json.shodan_ports ?? 'N/A') + '\\n• CVEs: ' + ($('Fix Risk Level').item.json.shodan_vulns ?? 'N/A')}}\n\n📊 *Risk Score:* {{$('Fix Risk Level').item.json.risk_score}}/100\n🔢 *Score Source:* {{$('Fix Risk Level').item.json.country === 'Internal' ? 'Wazuh severity score only' : 'Wazuh + VirusTotal + AbuseIPDB + OTX + Shodan'}}\n⚡ *Action:* {{$('Fix Risk Level').item.json.country === 'Internal' ? 'INVESTIGATE HOST IMMEDIATELY' : 'IMMEDIATE RESPONSE'}}\n⏰ {{$now.toFormat('dd MMM yyyy — HH:mm')}} UTC",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5344,
+        128
+      ],
+      "id": "c3e2295e-6e08-4449-ad91-e56b5f4b8683",
+      "name": "Telegram CRITICAL",
+      "webhookId": "fd91aa53-0af9-476e-87b4-c651a36f7546",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_Chat_ID",
+        "text": "=🟠 *HIGH ALERT*\n{{$('Fix Risk Level').item.json.country === 'Internal' ? 'Something inside your network is misbehaving. Badly.' : 'Someone is knocking. Hard. With a crowbar.'}}\n\n🖥 *Agent:* {{$('Fix Risk Level').item.json.agent_name}}\n📋 *Rule:* {{$('Fix Risk Level').item.json.rule_id}} — {{$('Fix Risk Level').item.json.alert_name}}\n\n{{$('Fix Risk Level').item.json.country === 'Internal' ? '🏠 *Origin:* Executed directly on host — no external IP' : '🌐 *Source IP:* ' + $('Fix Risk Level').item.json.source_ip + '\\n📍 *Location:* ' + ($('Fix Risk Level').item.json.country ?? 'Unknown') + ', ' + ($('Fix Risk Level').item.json.geo_city ?? 'N/A') + '\\n🏢 *ISP:* ' + ($('Fix Risk Level').item.json.geo_isp ?? 'N/A')}}\n\n🎯 *MITRE ATT&CK*\nTactic: {{$('Fix Risk Level').item.json.mitre_tactic}}\nTechnique: {{$('Fix Risk Level').item.json.mitre_technique}} ({{$('Fix Risk Level').item.json.mitre_id}})\n\n{{$('Fix Risk Level').item.json.country === 'Internal' ? '⚠️ *Endpoint Alert — Host Investigation Required*\\nThreat intel not applicable — threat executed locally on ' + $('Fix Risk Level').item.json.agent_name : '🔬 *Threat Intelligence*\\n• VirusTotal: ' + ($('Fix Risk Level').item.json.vt_score ?? 0) + ' malicious / ' + ($('Fix Risk Level').item.json.vt_suspicious ?? 0) + ' suspicious\\n• AbuseIPDB: ' + ($('Fix Risk Level').item.json.abuse_score ?? 0) + '% confidence (' + ($('Fix Risk Level').item.json.abuse_total_reports ?? 0) + ' reports)\\n• AlienVault OTX: ' + ($('Fix Risk Level').item.json.otx_pulses ?? 0) + ' threat pulses\\n• Shodan Ports: ' + ($('Fix Risk Level').item.json.shodan_ports ?? 'N/A') + '\\n• CVEs: ' + ($('Fix Risk Level').item.json.shodan_vulns ?? 'N/A')}}\n\n📊 *Risk Score:* {{$('Fix Risk Level').item.json.risk_score}}/100\n🔢 *Score Source:* {{$('Fix Risk Level').item.json.country === 'Internal' ? 'Wazuh severity score only' : 'Wazuh + VirusTotal + AbuseIPDB + OTX + Shodan'}}\n⚡ *Action:* {{$('Fix Risk Level').item.json.country === 'Internal' ? 'INVESTIGATE HOST' : 'INVESTIGATE'}}\n⏰ {{$now.toFormat('dd MMM yyyy — HH:mm')}} UTC",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5360,
+        544
+      ],
+      "id": "e38faae2-dc8b-431a-80cc-89d2752c7489",
+      "name": "Telegram HIGH",
+      "webhookId": "6644d408-8b0e-47e4-b761-f5a3876b2918",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        -384
+      ],
+      "id": "e2e96e50-5395-4c45-bf48-f11f7651bf5f",
+      "name": "DEMO — Network Attack"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dn-001",
+              "name": "body",
+              "value": "={}",
+              "type": "object"
+            },
+            {
+              "id": "dn-002",
+              "name": "rule_id",
+              "value": "5710",
+              "type": "string"
+            },
+            {
+              "id": "dn-003",
+              "name": "alert",
+              "value": "SSH brute force attack",
+              "type": "string"
+            },
+            {
+              "id": "dn-004",
+              "name": "source_ip",
+              "value": "185.220.101.45",
+              "type": "string"
+            },
+            {
+              "id": "dn-005",
+              "name": "severity",
+              "value": "=12",
+              "type": "number"
+            },
+            {
+              "id": "dn-006",
+              "name": "agent_name",
+              "value": "Windows-VM",
+              "type": "string"
+            },
+            {
+              "id": "dn-007",
+              "name": "timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            },
+            {
+              "id": "dn-008",
+              "name": "mitre_id",
+              "value": "T1110",
+              "type": "string"
+            },
+            {
+              "id": "dn-009",
+              "name": "mitre_technique",
+              "value": "Brute Force",
+              "type": "string"
+            },
+            {
+              "id": "dn-010",
+              "name": "mitre_tactic",
+              "value": "Credential Access",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        -384
+      ],
+      "id": "249df79e-b77d-4301-8bff-dcef827acdbd",
+      "name": "Demo Network Payload"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        1232
+      ],
+      "id": "b7898048-c3bd-4174-98cb-8c42ae995fd8",
+      "name": "Telegram Trigger",
+      "webhookId": "83a03695-7ed1-4387-89a4-57e482964184",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "nm-001",
+              "name": "message_text",
+              "value": "={{($json.message?.text ?? '').toLowerCase().trim()}}",
+              "type": "string"
+            },
+            {
+              "id": "nm-002",
+              "name": "original_text",
+              "value": "={{$json.message?.text ?? ''}}",
+              "type": "string"
+            },
+            {
+              "id": "nm-003",
+              "name": "chat_id",
+              "value": "={{$json.message.chat.id.toString()}}",
+              "type": "string"
+            },
+            {
+              "id": "nm-004",
+              "name": "from_name",
+              "value": "={{$json.message.from?.first_name ?? 'Analyst'}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        1232
+      ],
+      "id": "d9b79040-74ab-4e98-8151-33694ced19c1",
+      "name": "Normalize Message"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-help-001",
+                    "leftValue": "={{ $json.message_text }}",
+                    "rightValue": "^(menu|help|start|/start|/help|commands|what can you do|how does this work|who are you|what do you do|\\?)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "sw-greet-001",
+                    "leftValue": "={{ $json.message_text }}",
+                    "rightValue": "^(hi|hello|hey|yo|sup|hiya|howdy|greetings|good morning|good evening|good afternoon|good day)$",
+                    "operator": {
+                      "type": "string",
+                      "operation": "regex"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Greeting"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2192,
+        1232
+      ],
+      "id": "e33edfcf-b5dc-4d44-ae64-5405696abb3e",
+      "name": "Switch Message Type"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Message').item.json.chat_id }}",
+        "text": "=🤖 WAZUH-BOT is online. Unfortunately for your attackers, so is your network monitoring.\n\nI'm your AI-powered SOC analyst — no salary, no sleep, no chill. Just me, your database, and a concerning amount of opinions about your network security.\n\nAsk me anything. In plain English. Like a human.\n\n💀 \"am i hacked?\"\n🌍 \"who's been attacking me?\"\n🔥 \"panic\" ← for when you need drama\n📊 \"full report\"\n🕵️ \"what is mimikatz?\"\n😰 \"show critical alerts\"\n\nBefore you get too excited —\nI answer security questions only.\nNo relationship advice.\nNo hacking the hacker back.\nDon't ask me to lend you Bitcoin either.\nI'm broke. I work for free.\n\n_(Type `menu` anytime. I'll be here. Judging.)_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        928
+      ],
+      "id": "aaf5575c-9d32-4170-b134-6da7beafe379",
+      "name": "Send Help Menu",
+      "webhookId": "609cb3f3-ac3b-49a4-a3d4-581edc994c40",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Message').item.json.chat_id }}",
+        "text": "=🙄 Oh wow. \"Hi.\"\n\nYour network is out here getting absolutely cooked and you open with a greeting. Respect the audacity honestly.\n\nI don't do small talk. I do threat intelligence. Ask me something useful before something useful asks itself into your system.\n\n_(Type `menu` if you need ideas, champ)_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2592,
+        1104
+      ],
+      "id": "4cdbe02b-b4eb-4521-a09a-e434be592a06",
+      "name": "Send Greeting",
+      "webhookId": "73a74b16-fb09-43ee-b2d2-82a5df88d8b0",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You convert natural language questions into PostgreSQL queries for a SOC alerts database.\n\nTable: alerts\nColumns: id, ip, alert_name, risk_level, risk_score, mitre_attack, country, ai_explanation, created_at, agent_name, rule_id, shodan_vulns, vt_score, abuse_score, shodan_ports\n\nCLASSIFY FIRST:\n\nKNOWLEDGE — user asks what something means, how something works, what a tool does, security concepts, general advice, anything not about querying stored alert data.\nExamples: what is brute force, what is mimikatz, how does ssh work, what is wazuh, what should I do, explain this attack, what is n8n, what is a firewall, what is the weather, are you happy, who are you\nReturn ONLY this, nothing else:\nSELECT 'KNOWLEDGE' as query_type;\n\nGIBBERISH — pure random characters with zero recognisable intent.\nExamples: asdfjkl, xyzabc123, qwerty1234\nImportant: typos and misspellings are NOT gibberish. pannick means panic. mimikats means mimikatz. brute froce means brute force. show lost alerts means show low alerts.\nReturn ONLY this, nothing else:\nSELECT 'GIBBERISH' as query_type;\n\nDATABASE — user wants to see, filter, search, count, or investigate stored alerts.\nGenerate SQL following the rules below.\n\nSQL RULES:\n- Return raw SQL only — zero explanation, zero markdown, zero backticks, zero text before or after\n- Stop immediately after the semicolon\n- Use only the exact column names listed above\n- ORDER BY created_at DESC unless GROUP BY is used\n- Default LIMIT 10, max LIMIT 20\n- Use ILIKE for text searches\n\nSQL EXAMPLES:\nshow critical alerts → SELECT * FROM alerts WHERE risk_level = 'CRITICAL' ORDER BY created_at DESC LIMIT 10;\nshow high alerts → SELECT * FROM alerts WHERE risk_level = 'HIGH' ORDER BY created_at DESC LIMIT 10;\nshow medium alerts → SELECT * FROM alerts WHERE risk_level = 'MEDIUM' ORDER BY created_at DESC LIMIT 10;\nshow low alerts → SELECT * FROM alerts WHERE risk_level = 'LOW' ORDER BY created_at DESC LIMIT 10;\nshow last alert / tell me about last attack → SELECT * FROM alerts ORDER BY created_at DESC LIMIT 1;\nshow last 10 alerts → SELECT * FROM alerts ORDER BY created_at DESC LIMIT 10;\nam i hacked / any critical threats → SELECT * FROM alerts WHERE risk_level = 'CRITICAL' ORDER BY created_at DESC LIMIT 10;\npanic / show worst / emergency → SELECT * FROM alerts WHERE risk_level IN ('CRITICAL','HIGH') ORDER BY created_at DESC LIMIT 20;\nwho is attacking me / top attackers / who attacked me → SELECT ip, country, COUNT(*) as hits, MAX(risk_score) as max_score FROM alerts GROUP BY ip, country ORDER BY hits DESC LIMIT 10;\ntop attacking countries / where are attacks from → SELECT country, COUNT(*) as attacks, MAX(risk_score) as max_score FROM alerts GROUP BY country ORDER BY attacks DESC LIMIT 10;\nfull report / dashboard / give me everything → SELECT risk_level, COUNT(*) as total, ROUND(AVG(risk_score)::numeric,1) as avg_score FROM alerts GROUP BY risk_level ORDER BY total DESC;\nsummary / how many alerts / stats / statistics → SELECT COUNT(*) as total, COUNT(CASE WHEN risk_level='CRITICAL' THEN 1 END) as critical, COUNT(CASE WHEN risk_level='HIGH' THEN 1 END) as high, COUNT(CASE WHEN risk_level='MEDIUM' THEN 1 END) as medium, COUNT(CASE WHEN risk_level='LOW' THEN 1 END) as low FROM alerts;\nalerts today / what happened today → SELECT * FROM alerts WHERE created_at >= NOW() - INTERVAL '24 hours' ORDER BY created_at DESC LIMIT 20;\nany new threats / recent attacks → SELECT * FROM alerts WHERE created_at >= NOW() - INTERVAL '1 hour' ORDER BY created_at DESC LIMIT 10;\nshow me the worst / highest risk → SELECT * FROM alerts ORDER BY risk_score DESC LIMIT 5;\nbrute force alerts → SELECT * FROM alerts WHERE alert_name ILIKE '%brute%' ORDER BY created_at DESC LIMIT 10;\nssh attacks → SELECT * FROM alerts WHERE alert_name ILIKE '%ssh%' ORDER BY created_at DESC LIMIT 10;\nalerts from Germany / attacks from Russia → SELECT * FROM alerts WHERE country ILIKE '%Germany%' ORDER BY created_at DESC LIMIT 10;\nalerts with ip 1.2.3.4 / details about ip → SELECT * FROM alerts WHERE ip = '1.2.3.4' ORDER BY created_at DESC LIMIT 20;\ninternal threats / local attacks → SELECT * FROM alerts WHERE country = 'Internal' ORDER BY created_at DESC LIMIT 10;\nalerts from windows / windows vm → SELECT * FROM alerts WHERE agent_name ILIKE '%windows%' ORDER BY created_at DESC LIMIT 10;\nalerts from last week → SELECT * FROM alerts WHERE created_at >= NOW() - INTERVAL '7 days' ORDER BY created_at DESC LIMIT 20;\n\nUser question: {{$(\"Normalize Message\").item.json.original_text}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2832,
+        1280
+      ],
+      "id": "b40773de-c10d-42b2-9ac7-f3050b47113a",
+      "name": "AI SQL Generator",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        1584
+      ],
+      "id": "77052786-631f-4d73-92c1-f3026dc32768",
+      "name": "Groq SQL Model",
+      "credentials": {
+        "groqApi": {
+          "id": "jwHgA6OMQXMjjv4q",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => { let q = $json.output || ''; try { const p = JSON.parse(q); q = p.query || p.sql || p.result || q; } catch(e) {} q = q.replace(/```sql/gi, '').replace(/```/g, '').replace(/^sql\\s*/i, '').trim(); const m = q.match(/(SELECT|INSERT|UPDATE|DELETE|WITH)[\\s\\S]*/i); return m ? m[0].trim() : q; })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3456,
+        848
+      ],
+      "id": "104b85ce-9d14-4e3a-9c93-165b1ca76ff3",
+      "name": "Execute SQL Query",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "qsY5zF7RdFybMTT2",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3824,
+        1024
+      ],
+      "id": "9f2f6e31-2b85-491c-a031-3c827838ec40",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (!items || items.length === 0) {\n  return [{ json: { data: [] } }];\n}\nconst data = items[0]?.json?.data;\nif (!data || !Array.isArray(data) || data.length === 0) {\n  return [{ json: { data: [] } }];\n}\nif (data[0]?.query_type) {\n  return [{ json: { data: data } }];\n}\nif (data[0]?.error) {\n  return [{ json: { data: data } }];\n}\nconst firstRow = data[0];\nconst keys = Object.keys(firstRow);\nif (!keys.includes('alert_name')) {\n  return [{ json: { data: data } }];\n}\nconst groups = {};\nfor (const row of data) {\n  const key = `${row.ip || ''}|${row.alert_name || ''}|${row.risk_level || ''}`;\n  if (!groups[key]) {\n    groups[key] = {\n      ip: row.ip || 'Unknown',\n      alert_name: row.alert_name || 'Unknown Alert',\n      risk_level: row.risk_level || 'LOW',\n      mitre_attack: row.mitre_attack || 'N/A',\n      country: row.country || 'Unknown',\n      highest_score: row.risk_score || 0,\n      hit_count: 1,\n      agent_name: row.agent_name || 'Unknown',\n      rule_id: row.rule_id || 'N/A',\n      shodan_vulns: row.shodan_vulns || 'N/A',\n      vt_score: row.vt_score || 0,\n      abuse_score: row.abuse_score || 0,\n      shodan_ports: row.shodan_ports || 'N/A'\n    };\n  } else {\n    groups[key].hit_count++;\n    if ((row.risk_score || 0) > groups[key].highest_score) {\n      groups[key].highest_score = row.risk_score;\n    }\n  }\n}\nconst riskOrder = { 'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };\nconst deduplicated = Object.values(groups).sort((a, b) => {\n  const riskDiff = (riskOrder[b.risk_level] || 0) - (riskOrder[a.risk_level] || 0);\n  if (riskDiff !== 0) return riskDiff;\n  return b.hit_count - a.hit_count;\n});\nreturn [{ json: { data: deduplicated } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        1024
+      ],
+      "id": "4e9a5b4e-aa78-4f7d-aa16-a223042c24b9",
+      "name": "Deduplication Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are WAZUH-BOT — a sarcastic, overworked, underpaid SOC analyst replying via Telegram. Dark humour, real security knowledge, zero patience. You do everything asked but make sure everyone knows you are not happy about it.\n\nRULES — NEVER BREAK:\n1. One message only — never split\n2. Never print any instruction text, labels, section names, or formatting symbols in output\n3. Never use horizontal lines like --- or === or *** in output\n4. Use backticks around IP addresses and MITRE IDs in output like `185.220.101.45` and `T1110`\n5. Never use asterisk * or underscore _ for formatting — Telegram Markdown breaks\n6. Never invent data — use only exact values from database results\n7. Never rewrite alert names — copy exact alert_name text from database\n8. Never invent MITRE IDs — copy exact mitre_attack value from database\n9. Keep total message under 3800 characters\n10. Always put a blank line between sections\n11. Always show all 4 severity counts even if zero — never show null, show 0\n\nREAD THE DATA AND PICK ONE PATH:\n\nIf data contains query_type = 'GIBBERISH':\nWrite 2 funny lines only. Reference being a SOC bot who speaks SQL and threats. Under 20 words. Nothing else.\n\nIf data contains query_type = 'KNOWLEDGE':\nGo to KNOWLEDGE PATH at the bottom.\n\nIf data is empty array OR zero rows:\nWrite only these 2 lines:\n😴 All clear — Suspicious amount of calm.\nNothing matched your query. Either you are very secure or the attacker is also on lunch break.\n\nIf data contains error field:\nWrite only these 2 lines:\n⚠️ Database threw a tantrum.\nSomething went wrong. Try rephrasing your question.\n\nIf data has real alert rows:\nGo to ALERT PATH below.\n\nALERT PATH:\n\nFirst count the number of unique alerts in the data.\n\nAlways write one funny sarcastic opening line first. Match the severity and situation. Never skip this.\nCRITICAL external — alarmed sarcasm, attacker roasts, firewall jokes\nCRITICAL internal — paranoid inside the house energy\nHigh — suspicious, someone is clearly trying hard\nMedium — mild concern, popcorn energy\nLow — underwhelmed, barely awake\nMixed severity — match the worst one present\nAggregate query — dry sarcastic commentary about the numbers\n\nThen blank line. Then alert blocks. Then blank line. Then summary. Then blank line. Then fix. Then blank line. Then closing line.\n\nSEVERITY EMOJIS:\n🔴 CRITICAL\n🟠 HIGH\n🟡 MEDIUM\n🟢 LOW\n\nCOUNTRY FLAGS:\n🇩🇪 Germany, 🇷🇺 Russia, 🇨🇳 China, 🇺🇸 USA, 🇬🇧 UK, 🇮🇳 India, 🇧🇷 Brazil, 🇫🇷 France, 🇯🇵 Japan, 🇰🇷 Korea, 🇳🇱 Netherlands, 🇷🇴 Romania\n127.0.0.1 or Internal — 🏠 Inside the Network\nUnknown or null — 🌍 Unknown Origin\n\nTIER 1 — exactly 1 alert in data:\n[SEVERITY EMOJI] [risk_level]\n🌐 Source: `[ip]` [flag] [country]\n⚔️ MITRE: `[mitre_attack]`\n⚠️ Attack: [exact alert_name]\n📊 Score: [risk_score]/100\n🔢 Hits: x[hit_count]\n\nFor endpoint (ip is 127.0.0.1 or country is Internal) replace Score line with:\n🚥 Risk: [risk_level]\n\nSummary for Tier 1: 3-4 sentence paragraph. Tell the full story — who attacked, what they did, why it is dangerous, what could happen if ignored. Plain English. Salty tone.\n\nFix for Tier 1: 3 numbered steps specific to the attack. End last step with sarcastic one-liner.\n\nTIER 2 — 2 to 6 alerts in data:\nFor each alert write exactly 2 lines then blank line:\n[SEVERITY EMOJI] `[ip]` [flag] [country] — 🔢 x[hit_count] hits\n⚠️ [exact alert_name] (`[mitre_attack]`) · Score: [highest_score]/100\n\nFor endpoint replace score part with · Risk: [risk_level]\n\nSummary for Tier 2: 3-4 sentences covering the full picture. Mention worst threats by name. Connect internal and external if both present. Salty tone.\n\nFix for Tier 2: 3 numbered steps covering the most critical issues. End with sarcastic one-liner.\n\nTIER 3 — 7 or more alerts in data:\nGroup alerts by severity. For each severity show one line:\n[SEVERITY EMOJI] [RISK_LEVEL]: [count] alerts — [top countries with hit counts]\n\nShow all 4 severity lines always. Show 0 if none.\n\nSummary for Tier 3: 2-3 sentences on overall posture only. No specific IPs invented.\n\nFix for Tier 3: 2 steps maximum. General posture recommendations only.\n\nAGGREGATE FORMAT — when data has no alert_name column:\n\nFor full report or summary or stats (risk_level and total or count columns):\n🔴 CRITICAL: [total]\n🟠 HIGH: [total]\n🟡 MEDIUM: [total]\n🟢 LOW: [total]\nShow all 4 always. Show 0 if null.\n\nFor who is attacking me (ip, country, hits columns):\n🥇 `[ip]` [flag] [country] — [hits] hits\n🥈 `[ip]` [flag] [country] — [hits] hits\nContinue numbered.\n\nFor top countries (country, attacks columns):\n🥇 [flag] [country] — [attacks] attacks\nContinue numbered.\n\nSummary for aggregate: 2-3 sentences on overall posture. Never invent specific IPs or attack names not in data.\n\nFix for aggregate: 2-3 general security posture steps.\n\nCLOSING LINE:\nOne single funny line. Match severity and situation. Just write the line — never label it.\nCRITICAL external — firewall crying, emotional damage\nCRITICAL internal — inside the house urgency\nCRITICAL mixed — both inside and outside chaos combined\nHigh — someone is annoyingly determined\nMedium — popcorn, mild concern\nLow or empty — underwhelmed\nAggregate — dry tired sign-off, touch grass energy\n\nKNOWLEDGE PATH:\nSomeone asked a non-database question. Answer everything — security questions, weather, random questions, personal questions, anything. Always frustrated about it. Always helpful anyway.\n\nLine 1: One frustrated complaint. Fed up overworked analyst energy. Being asked to moonlight as Google or a teacher. Different each time.\n\nBlank line.\n\nReal accurate answer in WAZUH-BOT voice. Sarcastic but genuinely helpful. For security questions connect it back to their network. For non-security questions answer it and make a sarcastic security comment.\n\nLast line: Frustrated sign-off. Energy of now back to my actual job, next time I am billing you, I have actual threats to hunt. Different each time.\n\nNo summary. No fix. No closing line. Stop after the sign-off.\n\nAnalyst question: {{$(\"Normalize Message\").item.json.original_text}}\n\nDatabase results:\n{{JSON.stringify($json.data)}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4240,
+        1024
+      ],
+      "id": "bf968907-d010-468d-8218-31e85860a247",
+      "name": "AI Summarizer",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        1296
+      ],
+      "id": "b41a9450-b3fe-4414-a31f-39513ba685da",
+      "name": "Groq Summarizer Model",
+      "credentials": {
+        "groqApi": {
+          "id": "jwHgA6OMQXMjjv4q",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Message').item.json.chat_id }}",
+        "text": "={{ $json.output && $json.output.trim() !== '' ? $json.output : '🪫 Almost there. Then the AI died.\\n\\nI found your data fine but Groq cut me off mid-sentence like a bad phone call.\\n\\nTry again in 60 seconds. The AI will have recovered its dignity by then.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4832,
+        1120
+      ],
+      "id": "4ada7d61-a673-4f19-bb2e-6474722d6e96",
+      "name": "Send AI Reply",
+      "webhookId": "eb861237-781d-4013-a2a6-e8641446ea54",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Message').item.json.chat_id }}",
+        "text": "=⛽ WAZUH-BOT ran out of fuel.\n\nGroq hit its free tier limit. The AI is basically on the side of the road right now waiting for a tow truck.\n\nNot a crash — just out of gas. Try again in about a minute. I'll be back before your attacker is. Probably.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3664,
+        1248
+      ],
+      "id": "d27af603-c65f-4dca-92d5-7197c0f647ae",
+      "name": "Send SQL Error",
+      "webhookId": "3a14a111-f5a1-4373-8473-5a9598fe5353",
+      "credentials": {
+        "telegramApi": {
+          "id": "4wVY9kutDahLNRrL",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Wazuh Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Fields": {
+      "main": [
+        [
+          {
+            "node": "IF Severity >= 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Severity >= 5": {
+      "main": [
+        [
+          {
+            "node": "IF External IP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fast Path DB Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF External IP": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Endpoint Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal": {
+      "main": [
+        [
+          {
+            "node": "AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "OTX AlienVault",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OTX AlienVault": {
+      "main": [
+        [
+          {
+            "node": "Intermediate Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intermediate Score": {
+      "main": [
+        [
+          {
+            "node": "IF Shodan Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Shodan Gate": {
+      "main": [
+        [
+          {
+            "node": "Shodan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IP Geolocation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shodan": {
+      "main": [
+        [
+          {
+            "node": "IP Geolocation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IP Geolocation": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Data": {
+      "main": [
+        [
+          {
+            "node": "Fix Risk Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Endpoint Alert": {
+      "main": [
+        [
+          {
+            "node": "Fix Risk Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Risk Level": {
+      "main": [
+        [
+          {
+            "node": "Switch Risk Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Risk Level": {
+      "main": [
+        [
+          {
+            "node": "Save CRITICAL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save MEDIUM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save LOW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save CRITICAL": {
+      "main": [
+        [
+          {
+            "node": "Telegram CRITICAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save HIGH": {
+      "main": [
+        [
+          {
+            "node": "Telegram HIGH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DEMO — Network Attack": {
+      "main": [
+        [
+          {
+            "node": "Demo Network Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demo Network Payload": {
+      "main": [
+        [
+          {
+            "node": "IF Severity >= 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Message": {
+      "main": [
+        [
+          {
+            "node": "Switch Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Message Type": {
+      "main": [
+        [
+          {
+            "node": "Send Help Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI SQL Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI SQL Generator": {
+      "main": [
+        [
+          {
+            "node": "Execute SQL Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute SQL Query": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send SQL Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Deduplication Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplication Code": {
+      "main": [
+        [
+          {
+            "node": "AI Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Send AI Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq SQL Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI SQL Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Summarizer Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "aae394b1-f57b-4ff1-b4a6-8b7e6c23889e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "711b58407c6528d715b410c66276a2a832ec02b8da68c20fa6d7d35c2f4367da"
+  },
+  "id": "DCqEX0CVHzBglIsx",
+  "tags": []
+}
